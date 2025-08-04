@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{31DEB8ED-9FB7-4223-9740-261065DD7429}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rate-limit-service", "src\rate-limit-service\rate-limit-service.csproj", "{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{5C5BCBB8-37D2-4D04-97B3-CB51C357C948}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "lib\Domain\Domain.csproj", "{C967D2C7-E61D-4C02-929F-CE831C5753FB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C967D2C7-E61D-4C02-929F-CE831C5753FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C967D2C7-E61D-4C02-929F-CE831C5753FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C967D2C7-E61D-4C02-929F-CE831C5753FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C967D2C7-E61D-4C02-929F-CE831C5753FB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7EF4CAF7-AE20-44A2-B3D3-0906C5DBE3E1} = {31DEB8ED-9FB7-4223-9740-261065DD7429}
+		{C967D2C7-E61D-4C02-929F-CE831C5753FB} = {5C5BCBB8-37D2-4D04-97B3-CB51C357C948}
+	EndGlobalSection
+EndGlobal
