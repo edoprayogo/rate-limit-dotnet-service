@@ -30,6 +30,69 @@ public IActionResult Get()
 }
 ```
 
+## RateLimitAttribute Class
+
+The `RateLimitAttribute` is a custom attribute that enforces rate limiting on controller actions.  
+It uses `IMemoryCache` and configuration settings to track requests per client and endpoint.
+
+### Example Declaration
+
+```csharp
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+public class RateLimitAttribute : ActionFilterAttribute, IAsyncActionFilter
+{
+    // Constructor
+    public RateLimitAttribute() { }
+
+    // Main logic for rate limiting
+    async Task IAsyncActionFilter.OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        // ...rate limiting logic...
+    }
+
+    // Helper methods for configuration and IP address
+    private static bool IsRateLimitExceededAsync(IConfiguration? configuration) { ... }
+    private static string GetClientIpAddress(HttpContext context) { ... }
+    private async Task<RateLimit> GetRateLimitAsync(IConfiguration configuration) { ... }
+}
+```
+
+### How to Use
+
+Apply `[RateLimit]` to any controller action you want to protect:
+
+```csharp
+[RateLimit]
+public IActionResult Get()
+{
+    // Your endpoint logic
+}
+```
+
+### How It Works
+
+- Checks if rate limiting is enabled via configuration.
+- Tracks requests per endpoint and client IP.
+- Returns HTTP 429 if the limit is exceeded.
+- Otherwise, increments the request count and allows the request.
+
+### Configuration Example
+
+Add to `appsettings.json`:
+
+```json
+"RateLimit": {
+  "EnableRateLimiting": true,
+  "MaxRequests": 5,
+  "TimeWindowSeconds": 60
+}
+```
+
+### Notes
+
+- The attribute should be registered and used on controller actions.
+- For distributed scenarios, replace `IMemoryCache` with a distributed cache.
+
 ## Steps to Implement
 
 1. **Add the `[RateLimit]` attribute** to any controller action you want to protect.
