@@ -1,114 +1,193 @@
-# Rate Limit Implementation Guide
+# 🚀 ASP.NET Core 8 – API Versioning & Rate Limiting
 
-## Overview
+This project demonstrates:
 
-This service uses a custom `[RateLimit]` attribute to restrict the number of requests a client can make to specific endpoints within a given time window. This helps prevent abuse and ensures fair usage.
+- ✅ **API Versioning** → enabling endpoints with multiple versions (`/api/v1/...`, `/api/v2/...`)
+- ✅ **Rate Limiting (Fixed Window)** → limiting the number of client requests within a given time window
 
-## How It Works
+---
 
-- The `[RateLimit]` attribute is applied to controller actions.
-- When a request is made, the middleware checks if the client has exceeded the allowed number of requests.
-- If the limit is exceeded, the service returns HTTP 429 (Too Many Requests).
-- Otherwise, the request is processed normally.
+## 📂 Project Structure
 
-## Example Usage
+rate-limit-dotnet-service/
+|
+├── lib/
+│ └── Domain/ # Domain layer (entities, business logic, etc.)
+|
+└── src/
+└── rate-limit-service/
+├── Controllers/
+│ ├── v1/ # API version 1
+│ │ └── SampleController.cs
+│ └── v2/ # API version 2
+│ └── SampleController.cs
+│
+├── Middlewares/
+│ ├── Attributes/ # Custom attributes (if any)
+│ ├── Extensions/ # Extension methods (RateLimiter, Versioning)
+│ │ ├── RateLimiterExtensions.cs
+│ │ └── VersioningExtensions.cs
+│ └── Options/ # Additional configuration
+│
+├── appsettings.json
+├── Program.cs
+└── rate-limit-service.http # Request testing file
 
-In `HomeController.cs`:
+
+---
+
+## ⚡ API Versioning
+
+### 🔧 Configuration (`VersioningExtensions.cs`)
 
 ```csharp
-[AllowAnonymous]
-[HttpGet]
-[RateLimit]
-public IActionResult Get()
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+
+public static class VersioningExtensions
 {
-    return Ok(new
+    public static IServiceCollection AddCustomVersioning(this IServiceCollection services)
     {
-        Status = StatusCodes.Status200OK,
-        Message = "Welcome to the Rate Limit Service",
-        Timestamp = DateTime.UtcNow
-    });
-}
-```
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1, 0);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = ApiVersionReader.Combine(
+                new UrlSegmentApiVersionReader(),
+                new HeaderApiVersionReader("X-Api-Version")
+            );
+        })
+        .AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
 
-## RateLimitAttribute Class
-
-The `RateLimitAttribute` is a custom attribute that enforces rate limiting on controller actions.  
-It uses `IMemoryCache` and configuration settings to track requests per client and endpoint.
-
-### Example Declaration
-
-```csharp
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public class RateLimitAttribute : ActionFilterAttribute, IAsyncActionFilter
-{
-    // Constructor
-    public RateLimitAttribute() { }
-
-    // Main logic for rate limiting
-    async Task IAsyncActionFilter.OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
-    {
-        // ...rate limiting logic...
+        return services;
     }
-
-    // Helper methods for configuration and IP address
-    private static bool IsRateLimitExceededAsync(IConfiguration? configuration) { ... }
-    private static string GetClientIpAddress(HttpContext context) { ... }
-    private async Task<RateLimit> GetRateLimitAsync(IConfiguration configuration) { ... }
 }
 ```
 
-### How to Use
-
-Apply `[RateLimit]` to any controller action you want to protect:
-
+➡️ Register in Program.cs:
 ```csharp
-[RateLimit]
-public IActionResult Get()
+builder.Services.AddCustomVersioning();
+```
+
+📡 Controllers
+🔹 API v1
+
+File: Controllers/v1/SampleController.cs
+```csharp
+using Microsoft.AspNetCore.Mvc;
+
+namespace rate_limit_service.Controllers.v1;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+public class SampleController : ControllerBase
 {
-    // Your endpoint logic
+    [HttpGet]
+    public IActionResult GetV1() => Ok("Hello from API v1");
 }
+
 ```
+📌 Endpoint:
 
-### How It Works
+GET /api/v1/sample
+🔹 API v2
 
-- Checks if rate limiting is enabled via configuration.
-- Tracks requests per endpoint and client IP.
-- Returns HTTP 429 if the limit is exceeded.
-- Otherwise, increments the request count and allows the request.
+File: Controllers/v2/SampleController.cs
 
-### Configuration Example
+using Microsoft.AspNetCore.Mvc;
 
-Add to `appsettings.json`:
+namespace rate_limit_service.Controllers.v2;
 
-```json
-"RateLimit": {
-  "EnableRateLimiting": true,
-  "MaxRequests": 5,
-  "TimeWindowSeconds": 60
+[ApiController]
+[ApiVersion("2.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+public class SampleController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetV2() => Ok("Hello from API v2 🚀");
 }
-```
 
-### Notes
 
-- The attribute should be registered and used on controller actions.
-- For distributed scenarios, replace `IMemoryCache` with a distributed cache.
+📌 Endpoint:
 
-## Steps to Implement
+GET /api/v2/sample
 
-1. **Add the `[RateLimit]` attribute** to any controller action you want to protect.
-2. **Configure the rate limit logic** in your middleware or attribute implementation (not shown here).
-3. **Test the endpoint** by making repeated requests. After exceeding the limit, you should receive a 429 response.
+🚦 Rate Limiting (Fixed Window)
+🔧 Configuration (RateLimiterExtensions.cs)
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
-## Customization
+public static class RateLimiterExtensions
+{
+    public static IServiceCollection AddCustomRateLimiter(this IServiceCollection services)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.AddFixedWindowLimiter("fixed", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 5;                     // Max 5 requests
+                limiterOptions.Window = TimeSpan.FromMinutes(1);    // Per 1 minute
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0;                      // No queue
+            });
 
-- You can adjust the rate limit window and request count in the middleware or attribute logic.
-- For distributed scenarios, consider using Redis or another distributed cache.
+            // Custom response when rate limit is exceeded
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+                await context.HttpContext.Response.WriteAsync(
+                    "{\\\"error\\\": \\\"Rate limit exceeded. Try again later.\\\"}", token);
+            };
+        });
 
-## Troubleshooting
+        return services;
+    }
+}
 
-- If rate limiting does not work, ensure the middleware or attribute is registered and applied correctly.
-- Check logs for errors related to rate limit enforcement.
 
-## References
+➡️ Register in Program.cs:
 
-- https://github.com/edoprayogo/rate-limit-dotnet-service/tree/main
+builder.Services.AddCustomRateLimiter();
+app.UseRateLimiter();
+
+🧪 Testing
+
+Run the application:
+
+dotnet run --project src/rate-limit-service
+
+✅ Test API Versioning
+
+API v1 → GET /api/v1/sample → returns Hello from API v1
+
+API v2 → GET /api/v2/sample → returns Hello from API v2 🚀
+
+✅ Test Rate Limiting
+
+Send 6 quick requests to /api/v1/sample (or /api/v2/sample):
+
+Requests 1–5 → 200 OK
+
+Request 6 → 429 Too Many Requests
+
+📖 Summary
+
+With this setup, you get:
+
+Separate API versions (v1 & v2) for backward compatibility.
+
+Fixed window rate limiting to prevent abuse.
+
+Clean architecture & extensible structure for future features.
+
+
+---
+
+
