@@ -1,6 +1,7 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.OpenApi.Models;
+using rate_limit_service.Middlewares.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,8 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "my app v1", Version = "v1.0" });
     c.SwaggerDoc("v2", new OpenApiInfo { Title = "my app v2", Version = "v2.0" });
 });
+
+builder.Services.AddCustomRateLimiters();
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -41,14 +44,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var desc in provider.ApiVersionDescriptions)
+        if (provider != null && provider.ApiVersionDescriptions != null)
         {
-            options.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json",
-                desc.GroupName.ToUpperInvariant());
+            foreach (ApiVersionDescription desc in provider.ApiVersionDescriptions)
+            {
+                options.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json",
+                    desc.GroupName.ToUpperInvariant());
+            }
         }
+
     });
 }
 
+app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.MapControllers();
 
